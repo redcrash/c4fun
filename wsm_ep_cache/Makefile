@@ -1,0 +1,29 @@
+#
+# Flags d'erreurs:
+#
+ERROR_FLAGS = -std=gnu99 -Wall -Werror -O0 -g
+
+#
+# Flags pour le compilateur:
+#
+CFLAGS = $(ERROR_FLAGS) -D_GNU_SOURCE
+
+#
+# Flags pour l'editeur de liens:
+#
+LDFLAGS = $(ERROR_FLAGS) -lnuma -lpthread
+
+#
+# Construction des programmes:
+#
+all: clean wsm_ep_cache
+
+wsm_ep_cache: wsm_ep_cache.c
+	gcc $(CFLAGS) -c wsm_ep_cache.c -I../mem_alloc
+	gcc -o wsm_ep_cache wsm_ep_cache.o ../mem_alloc/mem_alloc.o $(LDFLAGS)
+
+#
+# Nettoyage:
+#
+clean:
+	rm -f *.o cachegrind.out.* perf.data* *~ core mem_bound mem_bound_infinite out wsm_ep_cache

@@ -1,5 +1,6 @@
 \documentclass[10pt,a4paper]{article}
 
+\usepackage{array}
 \usepackage{tikz}
 \usepackage{numprint}
 \usepackage{graphicx}
@@ -29,6 +30,33 @@ Our bench is the following :
 \end{itemize}
 
 \begin{figure}[h]
+  \centering
+  \begin{tabular}[h]{|c|c|}
+    \hline
+    Processors       & 2x Intel Xeon 5650 (hexa core) \\
+    \hline
+    Architecture     & Westmere-EP (06\_2CH)          \\
+    \hline
+    Core frequency   & 2.66GHz                        \\
+    \hline
+    Hyperthreading   & Disabled                       \\
+    \hline
+    L1 cache size    & 32 KiB / 32 KiB                \\
+     \hline
+    L2 cache size    & 256 KiB                        \\
+    \hline
+    L3 cache size    & 12 MiB                         \\
+    \hline
+    Cache line size  & 64 Bytes                       \\
+    \hline
+    Operating system & Linux kernel 3.11              \\
+    \hline
+  \end{tabular}
+  \caption{System configuration}
+  \label{tab:config}
+\end{figure}
+
+\begin{figure}[h]
   \begin{tabular}{|c|c|c|c|c|c|c|c|}
     \hline
     L1 & L2    & L3    & L3 snoop clean & L3 snoop mod. & Remote Cache & RAM & Rem. RAM \\
@@ -40,21 +68,21 @@ Our bench is the following :
 \end{figure}
 
 \begin{filecontents}{seq.dat}
-seq_data
+  seq_data
 \end{filecontents}
 
 \begin{figure}[h]
   \begin{tikzpicture}
     % \pgfplotsset{
-    %   log basis x={2},
-    %   x tick label style={/pgf/number format/1000 sep=\,},
-    %   log base 10 number format code/.code={
-    %     $\pgfmathparse{10^(#1)}\pgfmathprintnumber{\pgfmathresult}$
-    %   }
+    % log basis x={2},
+    % x tick label style={/pgf/number format/1000 sep=\,},
+    % log base 10 number format code/.code={
+    % $\pgfmathparse{10^(#1)}\pgfmathprintnumber{\pgfmathresult}$
+    % }
     % }
     \begin{axis}[legend pos=north west, ymin=0, ymax=100, xlabel={memory size (MB)}, ylabel={\% of memory samples}]
-seq_plot
-seq_legend
+      seq_plot
+      seq_legend
     \end{axis}
   \end{tikzpicture}
   \caption{percentage of memory samples for different memory size in the sequential
@@ -62,21 +90,21 @@ seq_legend
 \end{figure}
 
 \begin{filecontents}{rand.dat}
-rand_data
+  rand_data
 \end{filecontents}
 
 \begin{figure}[h]
   \begin{tikzpicture}
     % \pgfplotsset{
-    %   log basis x={2},
-    %   x tick label style={/pgf/number format/1000 sep=\,},
-    %   log base 10 number format code/.code={
-    %     $\pgfmathparse{10^(#1)}\pgfmathprintnumber{\pgfmathresult}$
-    %   }
+    % log basis x={2},
+    % x tick label style={/pgf/number format/1000 sep=\,},
+    % log base 10 number format code/.code={
+    % $\pgfmathparse{10^(#1)}\pgfmathprintnumber{\pgfmathresult}$
+    % }
     % }
     \begin{axis}[legend pos=north west,ymin=0,ymax=100,xlabel={memory size (MB)},ylabel={\% of memory samples}]
-rand_plot
-rand_legend
+      rand_plot
+      rand_legend
     \end{axis}
   \end{tikzpicture}
   \caption{percentage of memory samples for different memory size in the random

@@ -10,11 +10,8 @@
 #include <errno.h>
 #include <err.h>
 #include <sys/mman.h>
-
-// For thread affinity
-#include <sched.h>
-
 #include <sys/ioctl.h>
+#include <sched.h>
 
 #include "mem_alloc.h"
 #include "pebs_bench.h"
@@ -22,14 +19,15 @@
 
 #define CPU 9
 #define NUMA_NODE 0
-#define NUMA_ALLOC 1 /* Set to one to use numa_alloc */
+#define NUMA_ALLOC 0 /* Set to one to use numa_alloc */
 
 /* Used to control what we count */
 /* #define CORE_COUNT_INST */
 /* #define CORE_COUNT_LOADS */
-#define CORE_COUNT_REMOTE_CACHE
-#define CORE_COUNT_LOCAL_DRAM
-#define CORE_COUNT_REMOTE_DRAM
+#define CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
+#define CORE_OFFCORE_COUNT_REMOTE_CACHE
+#define CORE_OFFCORE_COUNT_LOCAL_DRAM
+#define CORE_OFFCORE_COUNT_REMOTE_DRAM
 #define CORE_PEBS_SAMPLING
 #define UNCORE_COUNT_READS
 
@@ -134,6 +132,22 @@ int run_benchs(size_t size_in_bytes,
   }
 #endif
 
+#ifdef CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
+  struct perf_event_attr pe_attr_mem_uncore_loc_rem;
+  memset(&pe_attr_mem_uncore_loc_rem, 0, sizeof(pe_attr_mem_uncore_loc_rem));
+  pe_attr_mem_uncore_loc_rem.size = sizeof(pe_attr_mem_uncore_loc_rem);
+  pe_attr_mem_uncore_loc_rem.type = PERF_TYPE_RAW;
+  pe_attr_mem_uncore_loc_rem.config = 0x53080f; // MEM_UNCORE_RETIRED.LOCAL_DRAM_AND_REMOTE_CACHE_HIT
+  pe_attr_mem_uncore_loc_rem.disabled = 1;
+  pe_attr_mem_uncore_loc_rem.exclude_kernel = 1;
+  pe_attr_mem_uncore_loc_rem.exclude_hv = 1;
+  int mem_uncore_loc_rem_fd = perf_event_open(&pe_attr_mem_uncore_loc_rem, 0, CPU, -1, 0);
+  if (mem_uncore_loc_rem_fd == -1) {
+    printf("perf_event_open failed for core MEM_UNCORE_LOC_REM_FD: %s\n", strerror(errno));
+    return -1;
+  }
+#endif
+
 #ifdef CORE_COUNT_LOADS
   struct perf_event_attr pe_attr_loads;
   memset(&pe_attr_loads, 0, sizeof(pe_attr_loads));
@@ -166,13 +180,13 @@ int run_benchs(size_t size_in_bytes,
   }
 #endif
 
-#ifdef CORE_COUNT_REMOTE_CACHE
+#ifdef CORE_OFFCORE_COUNT_REMOTE_CACHE
   struct perf_event_attr pe_attr_remote_cache;
   memset(&pe_attr_remote_cache, 0, sizeof(pe_attr_remote_cache));
   pe_attr_remote_cache.size = sizeof(pe_attr_remote_cache);
   pe_attr_remote_cache.type = PERF_TYPE_RAW;
   pe_attr_remote_cache.config = 0x5301b7; // OFF_CORE_RESPONSE_0
-  pe_attr_remote_cache.config1 = 0x1033; // REMOTE_CACHE_FWD
+  pe_attr_remote_cache.config1 = 0x1011; // REMOTE_CACHE_FWD
   pe_attr_remote_cache.disabled = 1;
   pe_attr_remote_cache.exclude_kernel = 1;
   pe_attr_remote_cache.exclude_hv = 1;
@@ -183,7 +197,7 @@ int run_benchs(size_t size_in_bytes,
   }
 #endif
 
-#ifdef CORE_COUNT_LOCAL_DRAM
+#ifdef CORE_OFFCORE_COUNT_LOCAL_DRAM
   struct perf_event_attr pe_attr_local_ram;
   memset(&pe_attr_local_ram, 0, sizeof(pe_attr_local_ram));
   pe_attr_local_ram.size = sizeof(pe_attr_local_ram);
@@ -200,7 +214,7 @@ int run_benchs(size_t size_in_bytes,
   }
 #endif
 
-#ifdef CORE_COUNT_REMOTE_DRAM
+#ifdef CORE_OFFCORE_COUNT_REMOTE_DRAM
   struct perf_event_attr pe_attr_remote_ram;
   memset(&pe_attr_remote_ram, 0, sizeof(pe_attr_remote_ram));
   pe_attr_remote_ram.size = sizeof(pe_attr_remote_ram);
@@ -248,6 +262,10 @@ int run_benchs(size_t size_in_bytes,
   struct timeval t1, t2;
   double elapsedTime;
   gettimeofday(&t1, NULL);
+#ifdef CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
+  ioctl(mem_uncore_loc_rem_fd, PERF_EVENT_IOC_RESET, 0);
+  ioctl(mem_uncore_loc_rem_fd, PERF_EVENT_IOC_ENABLE, 0);
+#endif
 #ifdef UNCORE_COUNT_READS
   ioctl(memory_reads_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(memory_reads_fd, PERF_EVENT_IOC_ENABLE, 0);
@@ -266,15 +284,15 @@ int run_benchs(size_t size_in_bytes,
   ioctl(memory_sampling_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(memory_sampling_fd, PERF_EVENT_IOC_ENABLE, 0);
 #endif
-#ifdef CORE_COUNT_REMOTE_CACHE
+#ifdef CORE_OFFCORE_COUNT_REMOTE_CACHE
   ioctl(remote_cache_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(remote_cache_fd, PERF_EVENT_IOC_ENABLE, 0);
 #endif
-#ifdef CORE_COUNT_LOCAL_DRAM
+#ifdef CORE_OFFCORE_COUNT_LOCAL_DRAM
   ioctl(local_ram_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(local_ram_fd, PERF_EVENT_IOC_ENABLE, 0);
 #endif
-#ifdef CORE_COUNT_REMOTE_DRAM
+#ifdef CORE_OFFCORE_COUNT_REMOTE_DRAM
   ioctl(remote_ram_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(remote_ram_fd, PERF_EVENT_IOC_ENABLE, 0);
 #endif
@@ -283,6 +301,9 @@ int run_benchs(size_t size_in_bytes,
   read_memory(memory, size_in_bytes);
 
   // Stop measuring
+#ifdef CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
+  ioctl(mem_uncore_loc_rem_fd, PERF_EVENT_IOC_DISABLE, 0);
+#endif
 #ifdef UNCORE_COUNT_READS
   ioctl(memory_reads_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
@@ -296,13 +317,13 @@ int run_benchs(size_t size_in_bytes,
 #ifdef CORE_PEBS_SAMPLING
   ioctl(memory_sampling_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
-#ifdef CORE_COUNT_REMOTE_CACHE
+#ifdef CORE_OFFCORE_COUNT_REMOTE_CACHE
   ioctl(remote_cache_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
-#ifdef CORE_COUNT_LOCAL_DRAM
+#ifdef CORE_OFFCORE_COUNT_LOCAL_DRAM
   ioctl(local_ram_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
-#ifdef CORE_COUNT_REMOTE_DRAM
+#ifdef CORE_OFFCORE_COUNT_REMOTE_DRAM
   ioctl(remote_ram_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
   gettimeofday(&t2, NULL);
@@ -310,16 +331,19 @@ int run_benchs(size_t size_in_bytes,
   elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
   // Print results
-  int nb_elems = size_in_bytes / sizeof(ELEM_TYPE);
-#ifdef CORE_COUNT_REMOTE_DRAM
+#ifdef CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
+  uint64_t mem_uncore_loc_rem_count;
+  read(mem_uncore_loc_rem_fd, &mem_uncore_loc_rem_count, sizeof(mem_uncore_loc_rem_count));
+#endif
+#ifdef CORE_OFFCORE_COUNT_REMOTE_DRAM
   uint64_t remote_ram_count;
   read(remote_ram_fd, &remote_ram_count, sizeof(remote_ram_count));
 #endif
-#ifdef CORE_COUNT_LOCAL_DRAM
+#ifdef CORE_OFFCORE_COUNT_LOCAL_DRAM
   uint64_t local_ram_count;
   read(local_ram_fd, &local_ram_count, sizeof(local_ram_count));
 #endif
-#ifdef CORE_COUNT_REMOTE_CACHE
+#ifdef CORE_OFFCORE_COUNT_REMOTE_CACHE
   uint64_t remote_cache_count;
   read(remote_cache_fd, &remote_cache_count, sizeof(remote_cache_count));
 #endif
@@ -351,15 +375,19 @@ int run_benchs(size_t size_in_bytes,
   printf("%-80s = %15" PRId64 "\n", "instructions count (core event: INST_RETIRED.ANY)", insts_count);
 #endif
 #ifdef CORE_COUNT_LOADS
+  int nb_elems = size_in_bytes / sizeof(ELEM_TYPE);
   printf("%-80s = %15" PRId64 " (expected = %d)\n", "loads count (core event: MEM_INST_RETIRED.LOADS)", loads_count, nb_elems);
 #endif
-#ifdef CORE_COUNT_REMOTE_CACHE
+#ifdef CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
+  printf("%-80s = %15" PRId64 "\n", "local ram & remote cache count (core event: MEM_UNCORE_RETIRED:L_DRAM_REM_CACHE)", mem_uncore_loc_rem_count);
+#endif
+#ifdef CORE_OFFCORE_COUNT_REMOTE_CACHE
   printf("%-80s = %15" PRId64 "\n", "remote cache count (core event: OFF_CORE_RESPONSE_0:REMOTE_CACHE_FWD)", remote_cache_count);
 #endif
-#ifdef CORE_COUNT_LOCAL_DRAM
+#ifdef CORE_OFFCORE_COUNT_LOCAL_DRAM
   printf("%-80s = %15" PRId64 "\n", "local memory count (core event: OFF_CORE_RESPONSE_1:LOCAL_DRAM)", local_ram_count);
 #endif
-#ifdef CORE_COUNT_REMOTE_DRAM
+#ifdef CORE_OFFCORE_COUNT_REMOTE_DRAM
   printf("%-80s = %15" PRId64 "\n", "remote memory count (core event: OFF_CORE_RESPONSE_1:REMOTE_DRAM)", remote_ram_count);
 #endif
 
@@ -369,7 +397,8 @@ int run_benchs(size_t size_in_bytes,
     return -1;
   }
   printf("\n");
-  print_samples(metadata_page, ADDR, (uint64_t)memory, (uint64_t)memory + size_in_bytes, nb_elems / period);
+  int nb_elems2 = size_in_bytes / sizeof(ELEM_TYPE);
+  print_samples(metadata_page, ADDR, (uint64_t)memory, (uint64_t)memory + size_in_bytes, nb_elems2 / period);
 #endif
 
   if (numa_available() == -1 && NUMA_ALLOC) {
