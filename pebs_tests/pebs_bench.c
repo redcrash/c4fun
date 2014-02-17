@@ -17,7 +17,7 @@
 #include "pebs_bench.h"
 #include "pebs_bench_ui.h"
 
-#define CPU 9
+#define CPU 8
 #define NUMA_NODE 0
 #define NUMA_ALLOC 0 /* Set to one to use numa_alloc */
 
@@ -90,6 +90,7 @@ int run_benchs(size_t size_in_bytes,
     memory = malloc(size_in_bytes);
   }
   assert(memory);
+  //memory = mmap(NULL, GiB, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
   memset(memory, -1, size_in_bytes);
   fill_memory(memory, size_in_bytes, access_mode);
 

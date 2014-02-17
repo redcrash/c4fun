@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
+#define KiB 1024
+#define MiB KiB*1024
+#define GiB MiB*1024
+
 enum access_mode_t {
   access_seq,
   access_rand

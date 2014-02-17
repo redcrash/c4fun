@@ -34,7 +34,6 @@ static int is_served_by_remote_cache(union perf_mem_data_src data_src) {
     if (data_src.mem_lvl & PERF_MEM_LVL_REM_CCE1) {
       return 1;
     } else if (data_src.mem_lvl & PERF_MEM_LVL_REM_CCE2) {
-      printf("fuckkk\n");
       return 1;
     } else {
       return 0;
@@ -62,7 +61,7 @@ static int is_served_by_local_cache(union perf_mem_data_src data_src) {
   }
 }
 
-char* concat(const char *s1, const char *s2) {
+char *concat(const char *s1, const char *s2) {
   char *result = malloc(strlen(s1) + strlen(s2) + 1);
   if (result == NULL) {
     return "malloc failed in concat\n";
@@ -72,7 +71,7 @@ char* concat(const char *s1, const char *s2) {
   return result;
 }
 
-char * get_snoop(union perf_mem_data_src data_src) {
+char *get_snoop(union perf_mem_data_src data_src) {
   if (data_src.mem_snoop & PERF_MEM_SNOOP_NA) {
     return "NA";
   }
@@ -91,9 +90,9 @@ char * get_snoop(union perf_mem_data_src data_src) {
   return "NULL";
 }
 
-char * get_data_src_level(union perf_mem_data_src data_src) {
-  char * res = concat("", "");
-  char * old_res;
+char *get_data_src_level(union perf_mem_data_src data_src) {
+  char *res = concat("", "");
+  char *old_res;
   if (data_src.mem_lvl & PERF_MEM_LVL_NA) {
     old_res = res;
     res = concat(res, "NA");
@@ -151,6 +150,44 @@ char * get_data_src_level(union perf_mem_data_src data_src) {
   } else if (data_src.mem_lvl & PERF_MEM_LVL_MISS) {
     old_res = res;
     res = concat(res, " Miss");
+    free(old_res);
+  }
+  return res;
+}
+
+char *get_tlb_string(union perf_mem_data_src data_src) {
+  char *res = concat("tlb ", "");
+  char *old_res;
+  if (data_src.mem_dtlb & PERF_MEM_TLB_NA) {
+    old_res = res;
+    res = concat(res, "NA");
+    free(old_res);
+  }
+  if (data_src.mem_dtlb & PERF_MEM_TLB_L1) {
+    old_res = res;
+    res = concat(res, "DTLB");
+    free(old_res);
+  } else if (data_src.mem_dtlb & PERF_MEM_TLB_L2) {
+    old_res = res;
+    res = concat(res, "STLB");
+    free(old_res);
+  }
+  if (data_src.mem_dtlb & PERF_MEM_TLB_HIT) {
+    old_res = res;
+    res = concat(res, " Hit");
+    free(old_res);
+  } else if (data_src.mem_dtlb & PERF_MEM_TLB_MISS) {
+    old_res = res;
+    res = concat(res, " Miss");
+    free(old_res);
+  }
+  if (data_src.mem_dtlb & PERF_MEM_TLB_WK) {
+    old_res = res;
+    res = concat(res, " hardware walker");
+    free(old_res);
+  } else if (data_src.mem_dtlb & PERF_MEM_TLB_OS) {
+    old_res = res;
+    res = concat(res, " OS fault handler");
     free(old_res);
   }
   return res;
@@ -249,8 +286,9 @@ void print_samples(struct perf_event_mmap_page *metadata_page, display_order ord
       printf("%-10" PRIu64, sample -> weight);
       char *level = get_data_src_level(sample -> data_src);
       printf("%-30s", level);
-      printf("%-10s", get_snoop(sample -> data_src));
       free(level);
+      printf("%-10s", get_snoop(sample -> data_src));
+      printf("%-10s", get_tlb_string(sample -> data_src));
       printf("\n");
     }
 #endif
