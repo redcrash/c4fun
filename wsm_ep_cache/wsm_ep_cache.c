@@ -54,7 +54,7 @@ static long perf_event_open(struct perf_event_attr *hw_event,
 }
 
 uint64_t *memory;
-size_t size_in_bytes = 30*MiB;
+size_t size_in_bytes = 64*MiB;
 
 void *fill_mem(void * p) {
 
@@ -68,6 +68,7 @@ void *fill_mem(void * p) {
    * robin fashion on NUMA systems, the first node is always used in
    * our case.
    */
+  //memory = malloc(size_in_bytes);
   memory = mmap(NULL, size_in_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
   if (memory == MAP_FAILED) {
     fprintf(stderr, "mmap failed: %s\n", strerror(errno));

@@ -156,7 +156,7 @@ char *get_data_src_level(union perf_mem_data_src data_src) {
 }
 
 char *get_tlb_string(union perf_mem_data_src data_src) {
-  char *res = concat("tlb ", "");
+  char *res = concat("", "");
   char *old_res;
   if (data_src.mem_dtlb & PERF_MEM_TLB_NA) {
     old_res = res;

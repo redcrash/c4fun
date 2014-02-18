@@ -26,10 +26,10 @@
 /* #define CORE_COUNT_LOADS */
 #define CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
 #define CORE_OFFCORE_COUNT_REMOTE_CACHE
-#define CORE_OFFCORE_COUNT_LOCAL_DRAM
+/* #define CORE_OFFCORE_COUNT_LOCAL_DRAM */
 #define CORE_OFFCORE_COUNT_REMOTE_DRAM
-#define CORE_PEBS_SAMPLING
-#define UNCORE_COUNT_READS
+/* #define CORE_PEBS_SAMPLING */
+/* #define UNCORE_COUNT_READS */
 
 #define ELEM_TYPE uint64_t
 
@@ -90,7 +90,7 @@ int run_benchs(size_t size_in_bytes,
     memory = malloc(size_in_bytes);
   }
   assert(memory);
-  //memory = mmap(NULL, GiB, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
+  memory = mmap(NULL, size_in_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
   memset(memory, -1, size_in_bytes);
   fill_memory(memory, size_in_bytes, access_mode);
 
