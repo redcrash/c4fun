@@ -22,13 +22,13 @@
 #include "mem_alloc.h"
 
 /* Used to control what we count */
-#define CORE_COUNT_DTLB_LOAD_MISSES_ANY
+/* #define CORE_COUNT_DTLB_LOAD_MISSES_ANY */
 /* #define CORE_COUNT_LOADS */
 /* #define CORE_COUNT_INST */
 /* #define CORE_OFFCORE_COUNT_UNCORE_HIT */
 /* #define CORE_OFFCORE_COUNT_OTHER_CORE_HIT_SNP */
 /* #define CORE_OFFCORE_COUNT_OTHER_CORE_HITM */
-#define CORE_OFFCORE_COUNT_REMOTE_CACHE_FWD
+/* #define CORE_OFFCORE_COUNT_REMOTE_CACHE_FWD */
 /* #define CORE_OFFCORE_COUNT_REMOTE_DRAM */
 /* #define CORE_OFFCORE_COUNT_LOCAL_DRAM */
 
@@ -43,15 +43,15 @@
 #define THIRTY_TWO SIXTEEN SIXTEEN
 #define SIXTY_FOUR THIRTY_TWO THIRTY_TWO
 
-static long perf_event_open(struct perf_event_attr *hw_event,
-			    pid_t pid,
-			    int cpu,
-			    int group_fd,
-			    unsigned long flags) {
-  int ret = syscall(__NR_perf_event_open, hw_event, pid, cpu,
-		    group_fd, flags);
-  return ret;
-}
+/* static long perf_event_open(struct perf_event_attr *hw_event, */
+/* 			    pid_t pid, */
+/* 			    int cpu, */
+/* 			    int group_fd, */
+/* 			    unsigned long flags) { */
+/*   int ret = syscall(__NR_perf_event_open, hw_event, pid, cpu, */
+/* 		    group_fd, flags); */
+/*   return ret; */
+/* } */
 
 uint64_t *memory;
 size_t size_in_bytes = 64*MiB;
@@ -68,16 +68,15 @@ void *fill_mem(void * p) {
    * robin fashion on NUMA systems, the first node is always used in
    * our case.
    */
-  //memory = malloc(size_in_bytes);
-  memory = mmap(NULL, size_in_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
+  memory = malloc(size_in_bytes);
+  //memory = mmap(NULL, size_in_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
   if (memory == MAP_FAILED) {
     fprintf(stderr, "mmap failed: %s\n", strerror(errno));
     return (void *) -1;
   }
   memset(memory, -1, size_in_bytes);
   fill_memory(memory, size_in_bytes, access_rand);
-
-  fprintf(stdout, "Memory filled successfully\n");
+  fprintf(stdout, "Memory filled successfully bewteen %p and %p\n", memory, (uint64_t *)((uint64_t)memory + size_in_bytes));
   return memory;
 }
 
@@ -393,6 +392,8 @@ void *read_memory(void *p) {
 
 int main(int argc, char **argv) {
 
+  printf("pid = %d\n", getpid());
+
   /**
    * Fill the memory in a thread on a specific core.
    */
@@ -446,5 +447,6 @@ int main(int argc, char **argv) {
     return -1;
   }
 
+  sleep(10000);
   return 0;
 }

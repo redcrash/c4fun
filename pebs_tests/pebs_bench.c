@@ -19,13 +19,13 @@
 
 #define CPU 8
 #define NUMA_NODE 0
-#define NUMA_ALLOC 0 /* Set to one to use numa_alloc */
+#define NUMA_ALLOC 1 /* Set to one to use numa_alloc */
 
 /* Used to control what we count */
 /* #define CORE_COUNT_INST */
 /* #define CORE_COUNT_LOADS */
-#define CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
-#define CORE_OFFCORE_COUNT_REMOTE_CACHE
+/* #define CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
+   #define CORE_OFFCORE_COUNT_REMOTE_CACHE */
 /* #define CORE_OFFCORE_COUNT_LOCAL_DRAM */
 #define CORE_OFFCORE_COUNT_REMOTE_DRAM
 /* #define CORE_PEBS_SAMPLING */
@@ -90,7 +90,7 @@ int run_benchs(size_t size_in_bytes,
     memory = malloc(size_in_bytes);
   }
   assert(memory);
-  memory = mmap(NULL, size_in_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
+  //memory = mmap(NULL, size_in_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
   memset(memory, -1, size_in_bytes);
   fill_memory(memory, size_in_bytes, access_mode);
 
@@ -302,6 +302,9 @@ int run_benchs(size_t size_in_bytes,
   read_memory(memory, size_in_bytes);
 
   // Stop measuring
+#ifdef CORE_OFFCORE_COUNT_REMOTE_DRAM
+  ioctl(remote_ram_fd, PERF_EVENT_IOC_DISABLE, 0);
+#endif
 #ifdef CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
   ioctl(mem_uncore_loc_rem_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
@@ -323,9 +326,6 @@ int run_benchs(size_t size_in_bytes,
 #endif
 #ifdef CORE_OFFCORE_COUNT_LOCAL_DRAM
   ioctl(local_ram_fd, PERF_EVENT_IOC_DISABLE, 0);
-#endif
-#ifdef CORE_OFFCORE_COUNT_REMOTE_DRAM
-  ioctl(remote_ram_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
   gettimeofday(&t2, NULL);
   elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
