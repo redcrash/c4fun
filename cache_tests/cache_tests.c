@@ -145,6 +145,15 @@ int main(int argc, char **argv) {
   printf("L2 = %u\n", l2);
   printf("L3 = %u\n\n", l3);
 
+  struct timespec t, t1, t2;
+  clock_gettime(CLOCK_REALTIME, &t);
+  clock_gettime(CLOCK_REALTIME, &t1);
+  clock_gettime(CLOCK_REALTIME, &t2);
+
+  printf("%" PRIu64 "\n", t.tv_nsec);
+  printf("%" PRIu64 "\n", t1.tv_nsec);
+  printf("%" PRIu64 "\n\n", t2.tv_nsec);
+
   /**
    * Measure time to measure time :-)
    */
@@ -156,7 +165,18 @@ int main(int argc, char **argv) {
   }
   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
   uint64_t ellapsed = (end.tv_sec * 1E9 + end.tv_nsec) - (start.tv_sec * 1E9 + start.tv_nsec);
-  printf("Time for clock_gettime = %" PRIu64 " nanoseconds (ellapsed = %ld)\n", ellapsed / nb_rep, ellapsed);
+  printf("Time for clock_gettime(CLOCK_PROCESS_CPUTIME_ID) = %" PRIu64 " nanoseconds (ellapsed = %ld)\n", ellapsed / nb_rep, ellapsed);
+
+  /**
+   * Measure time to measure time with an other function :-)
+   */
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+  for (int i = 0; i < nb_rep; i++) {
+    clock_gettime(CLOCK_REALTIME, &end);
+  }
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
+  ellapsed = (end.tv_sec * 1E9 + end.tv_nsec) - (start.tv_sec * 1E9 + start.tv_nsec);
+  printf("Time for clock_gettime(CLOCK_REAL_TIME) = %" PRIu64 " nanoseconds (ellapsed = %ld)\n", ellapsed / nb_rep, ellapsed);
 
   /**
    * Measure time to measure time with an other function :-)
@@ -168,7 +188,7 @@ int main(int argc, char **argv) {
   }
   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
   ellapsed = (end.tv_sec * 1E9 + end.tv_nsec) - (start.tv_sec * 1E9 + start.tv_nsec);
-  printf("Time for gettimeofday  = %" PRIu64 " nanoseconds (ellapsed = %ld)\n\n", ellapsed / nb_rep, ellapsed);
+  printf("Time for gettimeofday = %" PRIu64 " nanoseconds (ellapsed = %ld)\n\n", ellapsed / nb_rep, ellapsed);
 
   printf("%-10s %-10s", "Size (KiB)", "Time (ns)\n");
   for (size_t size = 1024; size <= max_size; size = step(size)) {
