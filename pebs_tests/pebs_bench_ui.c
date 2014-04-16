@@ -274,23 +274,23 @@ void print_samples(struct perf_event_mmap_page *metadata_page, display_order ord
     // Print the list of samples
 #ifdef PRINT
     printf("\n");
-    for (int i = 0; i < nb_samples; i++) {
-      struct sample *sample = &samples[i];
-      printf("%-20" PRIx64, sample -> ip);
-      printf("%-20" PRIx64, sample -> addr);
-      if (sample->addr >= start_addr && sample->addr <= end_addr) {
-	printf("%-10s", "in");
-      } else {
-	printf("%-10s", "out");
+      for (int i = 0; i < nb_samples; i++) {
+	struct sample *sample = &samples[i];
+	printf("%-20" PRIx64, sample -> ip);
+	printf("%-20" PRIx64, sample -> addr);
+	if (sample->addr >= start_addr && sample->addr <= end_addr) {
+	  printf("%-10s", "in");
+	} else {
+	  printf("%-10s", "out");
+	}
+	printf("%-10" PRIu64, sample -> weight);
+	char *level = get_data_src_level(sample -> data_src);
+	printf("%-30s", level);
+	free(level);
+	printf("%-10s", get_snoop(sample -> data_src));
+	printf("%-10s", get_tlb_string(sample -> data_src));
+	printf("\n");
       }
-      printf("%-10" PRIu64, sample -> weight);
-      char *level = get_data_src_level(sample -> data_src);
-      printf("%-30s", level);
-      free(level);
-      printf("%-10s", get_snoop(sample -> data_src));
-      printf("%-10s", get_tlb_string(sample -> data_src));
-      printf("\n");
-    }
 #endif
   } else {
     nb_samples = 198;

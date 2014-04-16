@@ -17,18 +17,18 @@
 #include "pebs_bench.h"
 #include "pebs_bench_ui.h"
 
-#define CPU 8
+#define CPU 7
 #define NUMA_NODE 0
 #define NUMA_ALLOC 1 /* Set to one to use numa_alloc */
 
 /* Used to control what we count */
-/* #define CORE_COUNT_INST */
-/* #define CORE_COUNT_LOADS */
+#define CORE_COUNT_INST
+#define CORE_COUNT_LOADS
 /* #define CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
    #define CORE_OFFCORE_COUNT_REMOTE_CACHE */
-/* #define CORE_OFFCORE_COUNT_LOCAL_DRAM */
+#define CORE_OFFCORE_COUNT_LOCAL_DRAM
 #define CORE_OFFCORE_COUNT_REMOTE_DRAM
-/* #define CORE_PEBS_SAMPLING */
+#define CORE_PEBS_SAMPLING
 /* #define UNCORE_COUNT_READS */
 
 #define ELEM_TYPE uint64_t
