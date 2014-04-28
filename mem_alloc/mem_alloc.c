@@ -8,19 +8,19 @@
  * Fills the pointer's array of the given size with each element points
  * to the next element.
  */
-static void fill_memory_seq(uint64_t *memory, size_t size) {
+static void fill_memory_seq_npad(uint64_t *memory, size_t size, unsigned char npad) {
 
   size_t pointer_size = sizeof(char *);
   if (size % pointer_size != 0) {
     fprintf(stderr, "size = %zu must be a multiple of pointer_size = %zu\n", size, pointer_size);
     exit(-1);
   }
-  size_t nb_elems = size / pointer_size;
+  size_t nb_elems = size / (pointer_size + npad);
   int i;
   for(i = 0; i < nb_elems - 1; i++) {
-    memory[i] = (uint64_t)&memory[i + 1];
+    memory[i * (pointer_size + npad)] = (uint64_t)&memory[(i + 1) * (pointer_size + npad)];
   }
-  memory[i] = (uint64_t)&memory[0];
+  memory[i * (pointer_size + npad)] = (uint64_t)&memory[0];
 }
 
 /**
@@ -44,7 +44,7 @@ static int compar(const void* a1, const void* a2) {
  * elements of the array are pointed to exactly by one other
  * element. The last element always points to the first one.
  */
-static void fill_memory_rand(uint64_t *memory, size_t size) {
+static void fill_memory_rand_npad(uint64_t *memory, size_t size, unsigned char npad) {
 
   size_t pointer_size = sizeof(void *);
   if (size % pointer_size != 0) {
@@ -90,15 +90,28 @@ static void fill_memory_rand(uint64_t *memory, size_t size) {
  * element pointing to another pseudo-random element in the array. All
  * the elements of the array are pointed to exactly by one other
  * element. The last element always points to the first one.
+ *
+ * Calling this function is the same as calling fill_memory_npad with
+ * npad=0.
  */
 void fill_memory(uint64_t *memory, size_t size, enum access_mode_t access_mode) {
+  fill_memory_npad(memory, size, access_mode, 0);
+}
+
+/**
+ * Same as above, but with additional npad parameter allowing to
+ * specify the size of each element in the filled memory
+ * region. Usefull to play with when one wants to understand
+ * prefecthing effects.
+ */
+void fill_memory_npad(uint64_t *memory, size_t size, enum access_mode_t access_mode, unsigned char npad) {
 
   switch (access_mode) {
   case access_seq:
-    fill_memory_seq(memory, size);
+    fill_memory_seq_npad(memory, size, npad);
     break;
   case access_rand:
-    fill_memory_rand(memory, size);
+    fill_memory_rand_npad(memory, size, npad);
     break;
   default:
     assert(NULL);
