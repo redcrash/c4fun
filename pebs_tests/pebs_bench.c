@@ -17,7 +17,7 @@
 #include "pebs_bench.h"
 #include "pebs_bench_ui.h"
 
-#define CPU 7
+#define CPU 6
 #define NUMA_NODE 0
 #define NUMA_ALLOC 1 /* Set to one to use numa_alloc */
 
@@ -29,7 +29,7 @@
 #define CORE_OFFCORE_COUNT_LOCAL_DRAM
 #define CORE_OFFCORE_COUNT_REMOTE_DRAM
 #define CORE_PEBS_SAMPLING
-/* #define UNCORE_COUNT_READS */
+#define UNCORE_COUNT_READS
 
 #define ELEM_TYPE uint64_t
 

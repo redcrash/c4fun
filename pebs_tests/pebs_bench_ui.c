@@ -193,7 +193,7 @@ char *get_tlb_string(union perf_mem_data_src data_src) {
   return res;
 }
 
-static int compar_addr(const void* a1, const void* a2) {
+int compar_addr(const void* a1, const void* a2) {
   struct sample *a = (struct sample*) a1;
   struct sample *b = (struct sample*) a2;
   if (a->addr == b->addr) {
@@ -202,6 +202,18 @@ static int compar_addr(const void* a1, const void* a2) {
     return -1;
   } else {
     return 1;
+  }
+}
+
+int compar_latency(const void* a1, const void* a2) {
+  struct sample *a = (struct sample*) a1;
+  struct sample *b = (struct sample*) a2;
+  if (a->weight == b->weight) {
+    return 0;
+  } else if (a->weight < b->weight) {
+    return 1;
+  } else {
+    return -1;
   }
 }
 
@@ -215,6 +227,8 @@ void print_samples(struct perf_event_mmap_page *metadata_page, display_order ord
   int in_malloced_count_3 = 0;
   int in_malloced_count_2 = 0;
   int nb_samples = 0;
+  uint64_t latency = 0;
+  uint64_t latency_memory = 0;
 
   if (metadata_page != NULL) {
     uint64_t head = metadata_page->data_head;
@@ -258,18 +272,20 @@ void print_samples(struct perf_event_mmap_page *metadata_page, display_order ord
 	if (is_served_by_local_cache(sample->data_src)) {
 	  cache_count++;
 	}
-	if (is_served_by_memory(sample->data_src)) {
+	if (is_served_by_memory(sample->data_src) || is_served_by_remote_cache(sample->data_src)) {
 	  memory_count++;
+	  latency_memory += sample->weight;
 	}
+	latency += sample->weight;
       }
       i = i + header -> size;
       header = (struct perf_event_header *)((char *)header + header -> size);
     }
 
     // Sort the list if required
-    qsort(samples, nb_samples, sizeof(struct sample), compar_addr);
+    qsort(samples, nb_samples, sizeof(struct sample), compar_latency);
 
-    printf("%-80s = %15d (expected = %d)\n", "samples count (core event: MEM_INST_RETIRED.LATENCY)", nb_samples, nb_samples_estimated);
+    printf("%-80s = %15d (expected = %d)\n", "samples count", nb_samples, nb_samples_estimated);
 
     // Print the list of samples
 #ifdef PRINT
@@ -304,4 +320,7 @@ void print_samples(struct perf_event_mmap_page *metadata_page, display_order ord
   printf("%d remote cache samples on %d samples (%.3f%%)\n", remote_cache_count, nb_samples, (remote_cache_count / (float) nb_samples * 100));
   printf("%d local  cache samples on %d samples (%.3f%%)\n", cache_count, nb_samples, (cache_count / (float) nb_samples * 100));
   printf("%d memory samples on %d samples (%.3f%%)\n", memory_count, nb_samples, (memory_count / (float) nb_samples * 100));
+  printf("\n");
+  printf("Average latency = %0.2f ns\n", (latency / (float) nb_samples));
+  printf("Average memory latency = %0.2f ns\n", (latency_memory / (float) memory_count));
 }

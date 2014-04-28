@@ -29,4 +29,4 @@ pebs_bench_ui: pebs_bench_ui.c
 # Nettoyage:
 #
 clean:
-	rm -f *.o cachegrind.out.* perf.data* *~ core mem_bound mem_bound_infinite out
+	rm -rf *.o cachegrind.out.* perf.data* *~ core auto pebs_bench out results
