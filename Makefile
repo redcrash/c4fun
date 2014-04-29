@@ -1,6 +1,6 @@
 all:
-	$(MAKE) -C cache_tests
 	$(MAKE) -C mem_alloc
+	$(MAKE) -C cache_tests
 	$(MAKE) -C mem_load
 	$(MAKE) -C mem_model
 	$(MAKE) -C pebs_tests

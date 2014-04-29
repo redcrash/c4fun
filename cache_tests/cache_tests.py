@@ -10,7 +10,9 @@ NB_READS = '10000000'
 
 cmd = ['./cache_tests', MAX_SIZE, NB_READS]
 p = re.compile('[0-9]+$')
-out = subprocess.Popen(cmd + ['seq'], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+cmd_seq = cmd + ['seq']
+print 'Running ' + str(cmd_seq)
+out = subprocess.Popen(cmd_seq, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
 _data_seq_ = ''
 for line in out.split('\n'):
     if p.match("".join(line.split()).replace('.', '')):
@@ -23,7 +25,9 @@ for line in out.split('\n'):
     elif line.startswith('L3 = '):
         _L3_ = line.split("=")[1]
 
-out = subprocess.Popen(cmd + ['rand'], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+cmd_rand = cmd + ['rand']
+print 'Running ' + str(cmd_rand)
+out = subprocess.Popen(cmd_rand, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
 _data_rand_ = ''
 for line in out.split('\n'):
     if p.match("".join(line.split()).replace('.', '')):
@@ -31,6 +35,7 @@ for line in out.split('\n'):
         _data_rand_ += splits[0] + "," + splits[1] + '\n'
 
 # Replace in template file
+print 'Creating results pdf file'
 if os.path.exists('results'):
     shutil.rmtree('results')
 os.makedirs('results')

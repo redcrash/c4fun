@@ -15,12 +15,12 @@ static void fill_memory_seq_npad(uint64_t *memory, size_t size, unsigned char np
     fprintf(stderr, "size = %zu must be a multiple of pointer_size = %zu\n", size, pointer_size);
     exit(-1);
   }
-  size_t nb_elems = size / (pointer_size + npad);
+  size_t nb_elems = size / pointer_size;
   int i;
   for(i = 0; i < nb_elems - 1; i++) {
-    memory[i * (pointer_size + npad)] = (uint64_t)&memory[(i + 1) * (pointer_size + npad)];
+    memory[i] = (uint64_t)&memory[i];
   }
-  memory[i * (pointer_size + npad)] = (uint64_t)&memory[0];
+  memory[i] = (uint64_t)&memory[0];
 }
 
 /**

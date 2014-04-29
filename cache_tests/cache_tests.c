@@ -145,15 +145,6 @@ int main(int argc, char **argv) {
   printf("L2 = %u\n", l2);
   printf("L3 = %u\n\n", l3);
 
-  struct timespec t, t1, t2;
-  clock_gettime(CLOCK_REALTIME, &t);
-  clock_gettime(CLOCK_REALTIME, &t1);
-  clock_gettime(CLOCK_REALTIME, &t2);
-
-  printf("%" PRIu64 "\n", t.tv_nsec);
-  printf("%" PRIu64 "\n", t1.tv_nsec);
-  printf("%" PRIu64 "\n\n", t2.tv_nsec);
-
   /**
    * Measure time to measure time :-)
    */
