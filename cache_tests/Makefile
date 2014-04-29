@@ -5,4 +5,4 @@ cache_tests: cache_tests.c
 	gcc $(CFLAGS) -c cache_tests.c
 	gcc -o cache_tests cache_tests.o ../mem_alloc/mem_alloc.o -lm
 clean:
-	rm -rf *.o cache_tests results core
+	rm -rf *.o cache_tests results core auto

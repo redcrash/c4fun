@@ -17,7 +17,9 @@ _data_seq_ = ''
 for line in out.split('\n'):
     if p.match("".join(line.split()).replace('.', '')):
         splits = line.split()
-        _data_seq_ += splits[0] + "," + splits[1] + '\n'
+        if _data_seq_:
+            _data_seq_ += '\n'
+        _data_seq_ += splits[0] + "," + splits[1]
     elif line.startswith('L1 = '):
         _L1_ = line.split("=")[1]
     elif line.startswith('L2 = '):
@@ -32,7 +34,9 @@ _data_rand_ = ''
 for line in out.split('\n'):
     if p.match("".join(line.split()).replace('.', '')):
         splits = line.split()
-        _data_rand_ += splits[0] + "," + splits[1] + '\n'
+        if _data_rand_:
+             _data_rand_ += '\n'
+        _data_rand_ += splits[0] + "," + splits[1]
 
 # Replace in template file
 print 'Creating results pdf file'
@@ -48,4 +52,4 @@ with open("results/results.tex", 'w+') as texFile:
             line = line.replace('_L2_', str(int(_L2_) / 1024))
             line = line.replace('_L3_', str(int(_L3_) / 1024))
             texFile.write(line)
-subprocess.call(['pdflatex', 'results.tex'], cwd='results', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+subprocess.call(['pdflatex', 'results.tex'], cwd='results')#, stdout=subprocess.NONE, stderr=subprocess.NONE)
