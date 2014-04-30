@@ -80,6 +80,7 @@ int main(int argc, char **argv) {
     clock_gettime(CLOCK_REALTIME, &end);
     uint64_t ns = (end.tv_sec * 1E9 + end.tv_nsec) - (start.tv_sec * 1E9 + start.tv_nsec);
     fprintf(stderr, "time = %" PRIu64 " ns\n", ns);
+    fprintf(stderr, "average latency = %" PRIu64 " cycles\n", (uint64_t)((float)ns / (nb_iter * 100) * 2.67));
   }
 
   return 0;
