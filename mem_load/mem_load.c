@@ -4,7 +4,6 @@
 #include <time.h> // For clock_gettime
 #include <numa.h>
 
-
 #define ONE      asm("movq (%%rbx), %%rbx;"\
 		     :		      \
 		     :		      \
