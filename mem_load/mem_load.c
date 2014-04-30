@@ -1,20 +1,14 @@
 #include "mem_alloc.h"
-#include <math.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <inttypes.h>
 #include <assert.h>
 #include <time.h> // For clock_gettime
-#include <sys/time.h> // For gettimeofday
-#include <string.h>
-#include <cpuid.h>
 #include <numa.h>
-//#include <numaif.h>
 
 
-#define ONE     p = (uint64_t *)*p;
+#define ONE      asm("movq (%%rbx), %%rbx;"\
+		     :		      \
+		     :		      \
+		     :"%rbx");
 #define FIVE    ONE ONE ONE ONE ONE
 #define	TEN	FIVE FIVE
 #define	FIFTY	TEN TEN TEN TEN TEN
@@ -62,7 +56,11 @@ int main(int argc, char **argv) {
   }
   assert(memory);
   fill_memory(memory, size_in_bytes, access_mode);
-  register uint64_t *p = memory;
+  uint64_t *p = memory;
+  asm("movq %0, %%rbx;"
+      :
+      :"r" (p)
+      :"%rbx");
 
   if (nb_iter == -1) {
     /**
