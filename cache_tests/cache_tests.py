@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 
-MAX_SIZE = '20000'
+MAX_SIZE = '512000'
 NB_READS = '10000000'
 
 cmd = ['./cache_tests', MAX_SIZE, NB_READS]

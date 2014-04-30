@@ -17,6 +17,17 @@
 #define	FIFTY	TEN TEN TEN TEN TEN
 #define	HUNDRED	FIFTY FIFTY
 
+#define ASM
+#define ONE_ASM      asm("movq (%%rbx), %%rbx;"\
+		     :		      \
+		     :		      \
+		     :"%rbx");
+#define FIVE_ASM    ONE_ASM ONE_ASM ONE_ASM ONE_ASM ONE_ASM
+#define	TEN_ASM	    FIVE_ASM FIVE_ASM
+#define	FIFTY_ASM   TEN_ASM TEN_ASM TEN_ASM TEN_ASM TEN_ASM
+#define	HUNDRED_ASM FIFTY_ASM FIFTY_ASM
+
+
 size_t step(size_t k) {
   if (k < 1024) {
     k = k * 2;
@@ -187,10 +198,24 @@ int main(int argc, char **argv) {
     assert(memory);
     fill_memory(memory, size, access_mode);
     register long remaining = nb_reads;
+#ifdef ASM
+    uint64_t *p = memory;
+#else
     register uint64_t *p = memory;
+#endif
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+#ifdef ASM
+    asm("movq %0, %%rbx;"
+	:
+	:"r" (p)
+	:"%rbx");
+#endif
     while (remaining > 0) {
+#ifdef ASM
+      HUNDRED_ASM
+#else
       HUNDRED
+#endif
       remaining -= 100;
     }
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
