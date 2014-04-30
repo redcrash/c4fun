@@ -60,7 +60,7 @@ void read_memory(uint64_t *memory, size_t size) {
   // stack accesses. If addr is in the stack, the line addr =
   // (uint64_t *)*addr is compiled (in pseudo anssembler) to r1 =
   // mem[addr]; r2 = mem[r1]; mem[addr] = r2; When doing the register
-  // allocation, the code is ocmpiled to: r2 = mem[r1]; r1 = r2; and
+  // allocation, the code is compiled to: r2 = mem[r1]; r1 = r2; and
   // we see that in that case we only have one memory load.
   register uint64_t *addr = memory;
 
