@@ -1,0 +1,1 @@
+The goal of this application is to provide a top like tool for memory bandwidth. For now it has only be tested (and should only) works on Intel Westmere-EP processor, but the goal is to extend it to support a wide range of x86 architectures.
