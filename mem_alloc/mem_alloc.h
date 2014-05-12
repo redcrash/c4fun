@@ -9,6 +9,7 @@
 #define GiB MiB*1024
 
 enum access_mode_t {
+  access_undef,
   access_seq,
   access_rand
 };

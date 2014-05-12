@@ -18,7 +18,7 @@ static void fill_memory_seq_npad(uint64_t *memory, size_t size, unsigned char np
   size_t nb_elems = size / pointer_size;
   int i;
   for(i = 0; i < nb_elems - 1; i++) {
-    memory[i] = (uint64_t)&memory[i];
+    memory[i] = (uint64_t)&memory[i+1];
   }
   memory[i] = (uint64_t)&memory[0];
 }
