@@ -17,8 +17,8 @@
 #include "pebs_bench.h"
 #include "pebs_bench_ui.h"
 
-#define CPU 6
-#define NUMA_NODE 0
+#define CPU 0
+#define NUMA_NODE 1
 #define NUMA_ALLOC 1 /* Set to one to use numa_alloc */
 
 /* Used to control what we count */
@@ -94,14 +94,25 @@ int run_benchs(size_t size_in_bytes,
   memset(memory, -1, size_in_bytes);
   fill_memory(memory, size_in_bytes, access_mode);
 
+  // Check where is located the memory
   void *to_chk = memory;
- int status[1];
- int ret_code;
- status[0] = -1;
- ret_code = move_pages(0 /*self memory */, 1, &to_chk, NULL, status, 0);
- printf("Memory at %p is at %d node (retcode %d)\n", to_chk, status[0], ret_code);
+  int status[1];
+  int ret_code;
+  status[0] = -1;
+  ret_code = move_pages(0 /*self memory */, 1, &to_chk, NULL, status, 0);
+  if (ret_code == -1) {
+    fprintf(stderr, "failed to check where is memeory with move_pages: %s\n", strerror(errno));
+    return -1;
+  }
+  if (NUMA_NODE != status[0]) {
+    fprintf(stderr, "memory on the wrong node: expected %d vs current = %d\n", NUMA_NODE, status[0]);
+    return -1;
+  }
 
   mlockall(MCL_CURRENT | MCL_FUTURE); // Ensure pages are not swapped
+
+  fprintf(stderr, "Running test on core %d\n", CPU);
+  fprintf(stderr, "Running test with memory on node %d (%s)\n", NUMA_NODE, (numa_node_of_cpu(CPU) == NUMA_NODE ? "local" : "remote"));
 
   /**
    * Profile memory and other things

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PRINT
+//#define PRINT
 
 static int is_served_by_memory(union perf_mem_data_src data_src) {
   if (data_src.mem_lvl & PERF_MEM_LVL_MISS) {
@@ -321,6 +321,6 @@ void print_samples(struct perf_event_mmap_page *metadata_page, display_order ord
   printf("%d local  cache samples on %d samples (%.3f%%)\n", cache_count, nb_samples, (cache_count / (float) nb_samples * 100));
   printf("%d memory samples on %d samples (%.3f%%)\n", memory_count, nb_samples, (memory_count / (float) nb_samples * 100));
   printf("\n");
-  printf("Average latency = %0.2f ns\n", (latency / (float) nb_samples));
+  printf("Average latency = %0.2f ns (%0.2f cycles for frequency = 2.668 Giga hertz)\n", (latency / (float) nb_samples), (latency / (float) nb_samples) * (1E9 / 266800000.0));
   printf("Average memory latency = %0.2f ns\n", (latency_memory / (float) memory_count));
 }

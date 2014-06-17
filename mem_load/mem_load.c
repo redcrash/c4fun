@@ -1,22 +1,32 @@
-#include "mem_alloc.h"
+#define _GNU_SOURCE
+
 #include <stdio.h>
+#include <errno.h>
 #include <assert.h>
 #include <time.h> // For clock_gettime()
 #include <numa.h>
 #include <sys/sysinfo.h> // For get_nprocs()
+#include <sched.h> // For sched_setaffinity
+
+#include "mem_alloc.h"
 
 /* #define ONE      asm("movq (%%rbx), %%rbx;"\ */
 /* :		      \ */
 /* :		      \ */
 /* :"%rbx"); */
-#define ONE     p = (uint64_t *)*p;
-#define FIVE    ONE ONE ONE ONE ONE
-#define	TEN	FIVE FIVE
-#define	FIFTY	TEN TEN TEN TEN TEN
-#define	HUNDRED	FIFTY FIFTY
+#define ONE       p = (uint64_t *)*p;
+#define FOUR      ONE ONE ONE ONE
+#define FIVE      FOUR ONE
+#define EIGHT     FOUR FOUR
+#define	TEN	  FIVE FIVE
+#define SIXTEEN   EIGHT EIGHT
+#define THIRTYTWO SIXTEEN SIXTEEN
+#define	FIFTY	  TEN TEN TEN TEN TEN
+#define SIXTYFOUR THIRTYTWO THIRTYTWO
+#define	HUNDRED	  FIFTY FIFTY
 
 #define MAX_NB_NUMA_NODES     16
-#define DEFAULT_MEM_SIZE 64000 *1024
+#define DEFAULT_MEM_SIZE 64 * 1024 * 1024
 
 void usage(const char *prog_name) {
   printf ("Usage: %s -a <access mode> -c <core> [-m <size>] [-n <node>] [-i <nb_iter>]\n"
@@ -82,7 +92,7 @@ int main(int argc, char **argv) {
       }
     }
     if (!strcmp(argv[i], "-m")) {
-      size_in_bytes = atol(argv[i+1]) * 1024;
+      size_in_bytes = atol(argv[i+1]);
     }
     if (!strcmp(argv[i], "-n")) {
       node = atoi(argv[i+1]);
@@ -130,23 +140,37 @@ int main(int argc, char **argv) {
 /*     :"r" (p) */
 /*     :"%rbx"); */
 
+  /**
+   * Pin process on core CPU
+   */
+  cpu_set_t mask;
+  CPU_ZERO(&mask);
+  CPU_SET(core, &mask);
+  if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
+    printf("sched_setaffinity failed: %s\n", strerror(errno));
+    return -1;
+  }
+
   if (nb_iter == -1) {
     // Infinite loop
     while (1) {
-      HUNDRED
+      SIXTYFOUR
     }
   } else {
     struct timespec start, end;
-    clock_gettime(CLOCK_REALTIME, &start);
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
     int register i = 0;
     while (i < nb_iter) {
       i++;
-      HUNDRED
+      SIXTYFOUR
     }
-    clock_gettime(CLOCK_REALTIME, &end);
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
     uint64_t ns = (end.tv_sec * 1E9 + end.tv_nsec) - (start.tv_sec * 1E9 + start.tv_nsec);
+    uint64_t latency = (uint64_t)((float)ns / (nb_iter * 64));
     fprintf(stderr, "time = %" PRIu64 " ns\n", ns);
-    fprintf(stderr, "average latency = %" PRIu64 " cycles\n", (uint64_t)((float)ns / (nb_iter * 100) * 2.67));
+    fprintf(stderr, "average latency = %" PRIu64 " ns (%" PRIu64 " cycles for frequency = 2.668 GHz)\n",
+	    latency,
+	    (uint64_t)(latency * 2.668));
   }
 
   return 0;
