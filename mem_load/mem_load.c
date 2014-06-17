@@ -32,7 +32,7 @@ void usage(const char *prog_name) {
   printf ("Usage: %s -a <access mode> -c <core> [-m <size>] [-n <node>] [-i <nb_iter>]\n"
 	  "\t -a: access mode is either seq or rand for sequential or random accesses\n"
 	  "\t -c: the core where the thread loading memory is pinned\n"
-	  "\t -m: memory size in kb of allocated and accessed memory\n"
+	  "\t -m: memory size in bytes of allocated and accessed memory\n"
 	  "\t -n: the NUMA node where memory must be explicitely allocated (-1 for local allocation)\n"
 	  "\t -i: the number of time the iteration reading over 100 elements is done (-1 for infinite loop)\n",
 	  prog_name);
