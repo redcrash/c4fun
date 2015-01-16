@@ -36,6 +36,9 @@
 #define MAX_NB_NUMA_NODES     16
 #define DEFAULT_MEM_SIZE 64 * 1024 * 1024
 
+#define PROTECTION (PROT_READ | PROT_WRITE)
+#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
+
 static long perf_event_open(struct perf_event_attr *hw_event,
 			    pid_t pid,
 			    int cpu,
@@ -46,7 +49,7 @@ static long perf_event_open(struct perf_event_attr *hw_event,
   return ret;
 }
 
-size_t get_hugepage_size() {
+static size_t get_hugepage_size() {
   const char *key = "Hugepagesize:";
 
   FILE *f = fopen("/proc/meminfo", "r");
@@ -66,18 +69,49 @@ size_t get_hugepage_size() {
   return size;
 }
 
+static unsigned char check_THP_never() {
+
+  const char key = '[';
+
+  FILE *f = fopen("/sys/kernel/mm/transparent_hugepage/enabled", "r");
+  assert(f);
+
+  char *linep = NULL;
+  size_t n = 0;
+  getline(&linep, &n, f);
+  int i = 0;
+  int spaces = 0;
+  char current = linep[0];
+  while (current != key) {
+    if (current == ' ') {
+      spaces++;
+    }
+    i++;
+    current = linep[i];
+  }
+  fclose(f);
+  return spaces == 2;
+}
+
 void usage(const char *prog_name) {
-  printf ("Usage: %s -a <access mode> -c <core> [-m <size>] [-n <node>] [-i <nb_iter>] [-r <nb_run>]\n"
+  printf ("Usage: %s -a <access mode> -c <core> [-m <size>] [-n <node>] [-i <nb_iter>] [-r <nb_run>] [-s]\n"
 	  "\t -a: access mode is either seq or rand for sequential or random accesses\n"
 	  "\t -c: the core where the thread loading memory is pinned\n"
 	  "\t -m: memory size in bytes of allocated and accessed memory\n"
 	  "\t -n: the NUMA node where memory must be explicitely allocated (-1 for local allocation)\n"
 	  "\t -i: the number of time the iteration reading over 64 elements is done (-1 for infinite loop)\n"
-	  "\t -r: in conjunction with -i the number of time we repeat the bench to compute average and standard deviation (default is 1)\n",
+	  "\t -r: the number of time we repeat the bench to compute average and standard deviation (default is 1)\n"
+	  "\t -s: to remove the usage of huge pages\n",
 	  prog_name);
 }
 
 int main(int argc, char **argv) {
+
+  // Assert THP is disabled
+  if (!check_THP_never()) {
+    fprintf(stderr, "THP must be disabled to run this bench:\n  write \"never\" to /sys/kernel/mm/transparent_hugepage/enabled\n");
+    return  -1;
+  }
 
   //Get numa configuration
   unsigned int nb_numa_nodes;
@@ -172,13 +206,14 @@ int main(int argc, char **argv) {
 	  "  - node = %d\n"
 	  "  - iterations = %d\n"
 	  "  - runs = %u\n"
-	  "  - huge pages = %s\n",
+	  "  - huge pages (%" PRIu64 " Kb) = %s\n",
 	  access_mode == access_rand ? "rand" : "seq",
 	  core,
 	  size_in_bytes,
           node,
           nb_iter,
 	  nb_runs,
+	  get_hugepage_size() / 1024,
           huge_pages == 1 ? "yes" : "no");
 
   // Allocate and fill memory
@@ -188,20 +223,29 @@ int main(int argc, char **argv) {
   assert(set_mempolicy(MPOL_BIND, &nodes, 8*sizeof(long unsigned int)) == 0);
   uint64_t *memory;
   if (huge_pages) {
+
     /* assert(posix_memalign((void**)&memory, get_hugepage_size(), size_in_bytes) == 0); */
     /* if(madvise(memory, size_in_bytes, MADV_HUGEPAGE)) { */
     /*   fprintf(stderr, "Cannot use large pages.\n"); */
     /* } */
-    int fd = open("/mnt/huge/hugepagefile", O_CREAT | O_RDWR, 0755);
-    if (fd < 0) {
-      perror("Open failed");
-      exit(1);
-    }
-    memory = mmap(0, size_in_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+    memory = mmap(0, size_in_bytes, PROTECTION, FLAGS, 0, 0);
     if (memory == MAP_FAILED) {
       perror("mmap");
       exit(1);
     }
+
+
+    /* int fd = open("/mnt/huge/hugepagefile", O_CREAT | O_RDWR, 0755); */
+    /* if (fd < 0) { */
+    /*   perror("Open failed"); */
+    /*   exit(1); */
+    /* } */
+    /* memory = mmap(0, size_in_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0); */
+    /* if (memory == MAP_FAILED) { */
+    /*   perror("mmap"); */
+    /*   exit(1); */
+    /* } */
   } else {
     assert(posix_memalign((void**)&memory, get_hugepage_size(), size_in_bytes) == 0);
     if(madvise(memory, size_in_bytes, MADV_NOHUGEPAGE)) {
@@ -210,6 +254,9 @@ int main(int argc, char **argv) {
   }
   fill_memory(memory, size_in_bytes, access_mode);
   fprintf(stderr, "done\n");
+
+  //sleep(50);
+
   register uint64_t *p = memory;
   asm("movq %0, %%rbx;"
       :
@@ -343,10 +390,10 @@ int main(int argc, char **argv) {
   float dtlb_misses_deviation = sqrt(dtlb_misses_deviation_sum / (float)nb_runs);
   float cache_misses_deviation = sqrt(cache_misses_deviation_sum / (float)nb_runs);
 
-  fprintf(stderr, "\nbench time: average = %.3f ms, standard deviation = %.3f\n", time_avg / 1E6, (time_deviation / time_avg) * 100);
-  fprintf(stderr, "single memory access latency: average = %.3f ns, standard deviation = %.3f\n", latency_avg, (latency_deviation / latency_avg) * 100);
-  fprintf(stderr, "%% of dtlb misses: average = %.3f, standard deviation = %.3f\n", (dtlb_misses_avg * 100) / (64.0 * nb_iter), (dtlb_misses_deviation / dtlb_misses_avg) * 100);
-  fprintf(stderr, "%% of cache misses: average = %.3f, standard deviation = %.3f\n", (cache_misses_avg * 100) / (64.0 * nb_iter), (cache_misses_deviation / cache_misses_avg) * 100);
+  fprintf(stderr, "\nBench time:                   average = %.3f ms, standard deviation = %.3f%%\n", time_avg / 1E6, (time_deviation / time_avg) * 100);
+  fprintf(stderr, "Single memory access latency: average = %.3f ns, standard deviation = %.3f%%\n", latency_avg, (latency_deviation / latency_avg) * 100);
+  fprintf(stderr, "Data tlb misses %% (among all reads): average = %.3f, standard deviation = %.3f%%\n", (dtlb_misses_avg * 100) / (64.0 * nb_iter), (dtlb_misses_deviation / dtlb_misses_avg) * 100);
+  fprintf(stderr, "Cache misses %% (among all reads)   : average = %.3f, standard deviation = %.3f%%\n", (cache_misses_avg * 100) / (64.0 * nb_iter), (cache_misses_deviation / cache_misses_avg) * 100);
 
   free(times);
   free(latencies);
