@@ -248,9 +248,9 @@ int main(int argc, char **argv) {
     /* } */
   } else {
     assert(posix_memalign((void**)&memory, get_hugepage_size(), size_in_bytes) == 0);
-    if(madvise(memory, size_in_bytes, MADV_NOHUGEPAGE)) {
-      fprintf(stderr, "Cannot use large pages.\n");
-    }
+    /* if(madvise(memory, size_in_bytes, MADV_NOHUGEPAGE)) { */
+    /*   fprintf(stderr, "Cannot use large pages.\n"); */
+    /* } */
   }
   fill_memory(memory, size_in_bytes, access_mode);
   fprintf(stderr, "done\n");
