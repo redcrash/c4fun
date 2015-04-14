@@ -10,9 +10,20 @@
 #include <inttypes.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
-#include <perfmon/pfmlib_perf_event.h>
+#include <linux/perf_event.h>
+//#include <perfmon/pfmlib_perf_event.h>
 
 #define rmb()		asm volatile("lfence" ::: "memory")
+
+static long perf_event_open(struct perf_event_attr *hw_event,
+			    pid_t pid,
+			    int cpu,
+			    int group_fd,
+			    unsigned long flags) {
+  int ret = syscall(__NR_perf_event_open, hw_event, pid, cpu,
+		    group_fd, flags);
+  return ret;
+}
 
 struct sample {
   uint64_t ip;
@@ -72,7 +83,7 @@ int main() {
 
   pid = 0;
   int cpu = -1;
-  printf("Calling perf event open: sampling period = %lu, pid = %d, cpu = %d, use freq = %u, config = %lu, sample_type= %lu\n",
+  printf("Calling perf event open: sampling period = %llu, pid = %d, cpu = %d, use freq = %u, config = %llu, sample_type= %llu\n",
 		  pe.sample_period, pid, cpu, pe.freq, pe.config, pe.sample_type);
 
   /* printf("Calling syscal with sampling period = %lu, pid = %d, cpu = %d, pe.type=%u, pe.config=%lu, pe.config1=%lu\n", */

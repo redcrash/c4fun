@@ -1,5 +1,6 @@
-c4fun
+c4fun 
 =============
+Authors: Manuel Selva, Harald Servat
 
 This project contains several C independent programs and some common
 libraries for Linux used to illustrate some architectural details of

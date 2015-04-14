@@ -3,8 +3,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <numa.h>
-#include <numaif.h>
+#ifdef HAVE_NUMA
+# include <numa.h>
+# include <numaif.h>
+#endif
 #include <assert.h>
 #include <sys/time.h>
 #include <errno.h>
@@ -12,6 +14,7 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <sched.h>
+#include <string.h>
 
 #include "mem_alloc.h"
 #include "pebs_bench.h"
@@ -26,10 +29,12 @@
 #define CORE_COUNT_LOADS
 /* #define CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
    #define CORE_OFFCORE_COUNT_REMOTE_CACHE */
-#define CORE_OFFCORE_COUNT_LOCAL_DRAM
-#define CORE_OFFCORE_COUNT_REMOTE_DRAM
+//#define CORE_OFFCORE_COUNT_LOCAL_DRAM
+//#define CORE_OFFCORE_COUNT_REMOTE_DRAM
 #define CORE_PEBS_SAMPLING
-#define UNCORE_COUNT_READS
+//#define UNCORE_COUNT_READS
+#define INTEL_SANDYBRIDGE
+// #define INTEL_WESTMERE
 
 #define ELEM_TYPE uint64_t
 
@@ -82,19 +87,24 @@ int run_benchs(size_t size_in_bytes,
    * pages are touched and as a consequence, no page faults will occur
    * during the measurement.
    */
-  numa_available();
   uint64_t *memory;
+#ifdef HAVE_NUMA
+  numa_available();
   if (numa_available() != -1 && NUMA_ALLOC) {
     memory = numa_alloc_onnode(size_in_bytes, NUMA_NODE);
   } else {
     memory = malloc(size_in_bytes);
   }
+#else
+    memory = malloc(size_in_bytes);
+#endif
   assert(memory);
   //memory = mmap(NULL, size_in_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
   memset(memory, -1, size_in_bytes);
   fill_memory(memory, size_in_bytes, access_mode);
 
   // Check where is located the memory
+#ifdef HAVE_NUMA
   void *to_chk = memory;
   int status[1];
   int ret_code;
@@ -108,12 +118,18 @@ int run_benchs(size_t size_in_bytes,
     fprintf(stderr, "memory on the wrong node: expected %d vs current = %d\n", NUMA_NODE, status[0]);
     return -1;
   }
+#endif
 
   mlockall(MCL_CURRENT | MCL_FUTURE); // Ensure pages are not swapped
 
   fprintf(stderr, "Running test on core %d\n", CPU);
+#ifdef HAVE_NUMA
   fprintf(stderr, "Running test with memory on node %d (%s)\n", NUMA_NODE, (numa_node_of_cpu(CPU) == NUMA_NODE ? "local" : "remote"));
+#else
+  fprintf(stderr, "Running test with memory on this node without NUDA control\n");
+#endif
 
+#if 0
   /**
    * Profile memory and other things
    */
@@ -129,6 +145,7 @@ int run_benchs(size_t size_in_bytes,
     printf("perf_event_open failed for page faults: %s\n", strerror(errno));
     return -1;
   }
+#endif
 
 #ifdef UNCORE_COUNT_READS
   struct perf_event_attr pe_attr_unc_memory;
@@ -165,7 +182,13 @@ int run_benchs(size_t size_in_bytes,
   memset(&pe_attr_loads, 0, sizeof(pe_attr_loads));
   pe_attr_loads.size = sizeof(pe_attr_loads);
   pe_attr_loads.type = PERF_TYPE_RAW;
+#if defined(INTEL_WESTMERE)
   pe_attr_loads.config = 0x010b; // MEM_INST_RETIRED.LOADS
+#elif defined(INTEL_SANDYBRIDGE)
+  pe_attr_loads.config = 0x81d0; // MEM_UOPS_RETIRED.ALL_LOADS // Intel Core i{3,5,7}-2xxx Table 19-2, section 19.5, Vol3b)
+#else
+# error Unsupported architecture
+#endif
   pe_attr_loads.disabled = 1;
   pe_attr_loads.exclude_kernel = 1;
   pe_attr_loads.exclude_hv = 1;
@@ -248,7 +271,13 @@ int run_benchs(size_t size_in_bytes,
   memset(&pe_attr_sampling, 0, sizeof(pe_attr_sampling));
   pe_attr_sampling.size = sizeof(pe_attr_sampling);
   pe_attr_sampling.type = PERF_TYPE_RAW;
-  pe_attr_sampling.config = 0x100b; // MEM_INST_RETIRED.LATENCY_ABOVE_THRESHOLD
+#if defined(INTEL_WESTMERE)
+  pe_attr_sampling.config = 0x100b; // MEM_INST_RETIRED.LATENCY_ABOVE_THRESHOLD // Westmere EP Xeon (section 18.7.1.2)
+#elif defined(INTEL_SANDYBRIDGE)
+  pe_attr_sampling.config = 0x01cd; // MEM_TRANS_RETIRED.LOAD_LATENCY // Intel Core i{3,5,7}-2xxx Table 19-2, section 19.5, Vol3b)
+#else
+# error Unsupported architecture
+#endif
   pe_attr_sampling.disabled = 1;
   pe_attr_sampling.config1 = 3; // latency threshold
   pe_attr_sampling.sample_period = period;
@@ -290,8 +319,10 @@ int run_benchs(size_t size_in_bytes,
   ioctl(inst_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(inst_fd, PERF_EVENT_IOC_ENABLE, 0);
 #endif
+#if 0
   ioctl(page_faults_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(page_faults_fd, PERF_EVENT_IOC_ENABLE, 0);
+#endif
 #ifdef CORE_PEBS_SAMPLING
   ioctl(memory_sampling_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(memory_sampling_fd, PERF_EVENT_IOC_ENABLE, 0);
@@ -328,7 +359,9 @@ int run_benchs(size_t size_in_bytes,
 #ifdef CORE_COUNT_INST
   ioctl(inst_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
+#if 0
   ioctl(page_faults_fd, PERF_EVENT_IOC_DISABLE, 0);
+#endif
 #ifdef CORE_PEBS_SAMPLING
   ioctl(memory_sampling_fd, PERF_EVENT_IOC_DISABLE, 0);
 #endif
@@ -371,11 +404,15 @@ int run_benchs(size_t size_in_bytes,
   uint64_t insts_count;
   read(inst_fd, &insts_count, sizeof(insts_count));
 #endif
+#if 0
   uint64_t page_faults_count;
   read(page_faults_fd, &page_faults_count, sizeof(page_faults_count));
+#endif
   printf("\n");
   printf("%-80s = %15.3f \n",       "time (milliseconds)", elapsedTime);
+#if 0
   printf("%-80s = %15" PRIu64 "\n", "Page faults count (software event)", page_faults_count);
+#endif
 #ifdef UNCORE_COUNT_READS
   if (access_mode == access_seq) {
     printf("%-80s = %15" PRId64 " (expected = %" PRId64 " considering each cache line is loaded once only)\n", "64 bytes cache line reads from RAM count (uncore event: QMC_NORMAL_READS.ANY)", memory_reads_count, (size_in_bytes / 64));
@@ -388,7 +425,11 @@ int run_benchs(size_t size_in_bytes,
 #endif
 #ifdef CORE_COUNT_LOADS
   int nb_elems = size_in_bytes / sizeof(ELEM_TYPE);
+#if 0
   printf("%-80s = %15" PRId64 " (expected = %d)\n", "loads count (core event: MEM_INST_RETIRED.LOADS)", loads_count, nb_elems);
+#else
+  printf("%-80s = %15" PRId64 " (expected = %d)\n", "loads count (core event: MEM_UOPS_RETIRED.ALL_LOADS)", loads_count, nb_elems);
+#endif
 #endif
 #ifdef CORE_MEM_UNCORE_RETIRED_LOCAL_DRAM_AND_REMOTE_CACHE_HIT
   printf("%-80s = %15" PRId64 "\n", "local ram & remote cache count (core event: MEM_UNCORE_RETIRED:L_DRAM_REM_CACHE)", mem_uncore_loc_rem_count);
@@ -413,11 +454,15 @@ int run_benchs(size_t size_in_bytes,
   print_samples(metadata_page, ADDR, (uint64_t)memory, (uint64_t)memory + size_in_bytes, nb_elems2 / period);
 #endif
 
+#ifdef HAVE_NUMA
   if (numa_available() == -1 && NUMA_ALLOC) {
     free(memory);
   } else {
     numa_free(memory, size_in_bytes);
   }
+#else
+	free (memory);
+#endif
   return 0;
 }
 

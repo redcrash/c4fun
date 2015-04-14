@@ -3,8 +3,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <numa.h>
-#include <numaif.h>
+#ifdef HAVE_NUMA
+# include <numa.h>
+# include <numaif.h>
+#endif
 #include <assert.h>
 #include <sys/time.h>
 #include <errno.h>
@@ -13,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
 
 
 // For thread affinity
@@ -76,14 +79,18 @@ int main(int argc, char **argv) {
    * pages are touched and as a consequence, no page faults will occur
    * during the measurement.
    */
-  numa_available();
   uint64_t *memory;
   size_t size_in_bytes = 64000000;
+#ifdef HAVE_NUMA
+  numa_available();
   if (numa_available() != -1 && NUMA_ALLOC) {
     memory = numa_alloc_onnode(size_in_bytes, NUMA_NODE);
   } else {
     memory = malloc(size_in_bytes);
   }
+#else
+    memory = malloc(size_in_bytes);
+#endif
   assert(memory);
   memset(memory, -1, size_in_bytes);
   fill_memory(memory, size_in_bytes, access_rand);

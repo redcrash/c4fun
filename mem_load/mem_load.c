@@ -6,8 +6,10 @@
 #include <errno.h>
 #include <assert.h>
 #include <time.h> // For clock_gettime()
-#include <numa.h>
-#include <numaif.h>
+#ifdef HAVE_NUMA
+# include <numa.h>
+# include <numaif.h>
+#endif
 #include <sys/ioctl.h> // For ioctl
 #include <sys/sysinfo.h> // For get_nprocs()
 #include <sys/mman.h> // For madvise
@@ -15,6 +17,8 @@
 #include <linux/perf_event.h> // For perf_event_open
 #include <unistd.h> // For syscall
 #include <sys/syscall.h> // For syscall
+#include <string.h>
+#include <assert.h>
 
 #include "mem_alloc.h"
 
@@ -115,6 +119,7 @@ int main(int argc, char **argv) {
 
   //Get numa configuration
   unsigned int nb_numa_nodes;
+#ifdef HAVE_NUMA
   int numa_node_to_cpu[MAX_NB_NUMA_NODES];
   int available = numa_available();
   if (available == -1) {
@@ -137,6 +142,9 @@ int main(int argc, char **argv) {
       }
     }
   }
+#else
+	nb_numa_nodes  = -1;
+#endif
 
   // Check and get arguments.
   size_t size_in_bytes = DEFAULT_MEM_SIZE;
@@ -188,7 +196,9 @@ int main(int argc, char **argv) {
     }
   }
   if (node == -1) {
+#if defined(HAVE_NUMA)
     node = numa_node_of_cpu(core);
+#endif
   }
   if (access_mode == access_undef) {
     usage(argv[0]);
@@ -220,7 +230,9 @@ int main(int argc, char **argv) {
   fprintf(stderr, "Allocating and filling memory ... ");
   long unsigned int nodes = 0;
   nodes += 1 << node;
+#ifdef HAVE_NUMA
   assert(set_mempolicy(MPOL_BIND, &nodes, 8*sizeof(long unsigned int)) == 0);
+#endif
   uint64_t *memory;
   if (huge_pages) {
 

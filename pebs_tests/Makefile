@@ -11,7 +11,8 @@ CFLAGS = $(ERROR_FLAGS) -D_GNU_SOURCE
 #
 # Flags pour l'editeur de liens:
 #
-LDFLAGS = $(ERROR_FLAGS) -lnuma
+LDFLAGS = $(ERROR_FLAGS)
+#LDFLAGS = $(ERROR_FLAGS) -lnuma
 
 #
 # Construction des programmes:

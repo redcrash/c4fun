@@ -12,6 +12,7 @@ CFLAGS = $(ERROR_FLAGS) -D_REENTRANT -DLinux -D_GNU_SOURCE
 # Flags pour l'editeur de liens:
 #
 LDFLAGS = $(ERROR_FLAGS) -lpthread -lnuma
+LDFLAGS = $(ERROR_FLAGS) -pthread
 
 #
 # Construction des programmes:
