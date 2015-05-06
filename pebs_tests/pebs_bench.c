@@ -290,7 +290,7 @@ int run_benchs(size_t size_in_bytes,
     return -1;
   }
   long page_size = sysconf(_SC_PAGESIZE);
-  size_t mmap_len = page_size + page_size * 1024;
+  size_t mmap_len = page_size + page_size * 8; /* PAGE_SIZE * 2^x * PAGE_SIZE  */
   struct perf_event_mmap_page *metadata_page = mmap(NULL, mmap_len, PROT_WRITE, MAP_SHARED, memory_sampling_fd, 0);
   if (metadata_page == MAP_FAILED) {
     fprintf (stderr, "Couldn't mmap file descriptor: %s - errno = %d\n",
